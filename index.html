@@ -4,93 +4,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#4f46e5">
-    <title>نظام التوصيل</title>
-    
-    <link rel="manifest" href="https://hr-directions.github.io/Delivery-man/manifest.json">
-    
+    <title>تتبع طلبك | صيدليتنا</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
-        iframe { width: 100%; height: 100%; border: none; }
+        body { font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; background-color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .custom-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02); }
+        input { font-size: 16px !important; } /* لمنع تقريب الشاشة في الآيفون */
         
-        #customModal {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-            display: none; align-items: center; justify-content: center; z-index: 9999;
-            backdrop-filter: blur(5px);
-        }
-        .pop-in { animation: pop 0.3s ease-out; }
-        @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        /* شريط التقدم (Stepper) */
+        .step-line { position: absolute; right: 23px; top: 40px; bottom: -20px; width: 2px; background-color: #e2e8f0; z-index: 0; }
+        .step-line.active { background-color: #2563eb; }
+        .step-icon { position: relative; z-index: 1; }
+        .pulse-ring { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); animation: pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1); }
+        @keyframes pulse { to { box-shadow: 0 0 0 15px rgba(37, 99, 235, 0); } }
     </style>
 </head>
-<body>
+<body class="text-slate-800 min-h-screen flex flex-col relative overflow-x-hidden">
 
-    <iframe src="https://hr-directions.github.io/Delivery-man/"></iframe>
+    <!-- خلفية زخرفية -->
+    <div class="absolute top-0 w-full h-64 bg-gradient-to-b from-blue-600 to-indigo-700 rounded-b-[3rem] -z-10 shadow-lg"></div>
 
-    <div id="customModal">
-        <div class="bg-white rounded-[30px] p-8 max-w-[340px] w-full text-center shadow-2xl pop-in mx-4">
-            <div class="w-20 h-20 bg-indigo-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-truck text-4xl text-indigo-600"></i>
-            </div>
-            <h2 class="text-xl font-bold text-gray-800 mb-2">تثبيت تطبيق المناديب</h2>
-            <p class="text-gray-500 text-sm mb-8 leading-relaxed">ثبت التطبيق الآن للوصول السريع ومتابعة الطلبات بدقة عالية.</p>
-            
-            <button id="mainActionBtn" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 active:scale-95 transition-all mb-4">
-                تثبيت الآن
-            </button>
-
-            <button onclick="closeModal()" class="text-gray-400 text-sm hover:text-gray-600 transition-colors">ربما لاحقاً</button>
+    <!-- رأس الصفحة -->
+    <header class="p-6 text-center text-white">
+        <div class="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-sm border border-white/20">
+            <i class="fas fa-heart pulse-ring rounded-full"></i>
         </div>
-    </div>
+        <h1 class="text-2xl font-black tracking-wide">صيدلية الرعاية الذكية</h1>
+        <p class="text-blue-100 font-bold text-sm mt-1">نتمنى لك دوام الصحة والعافية</p>
+    </header>
+
+    <!-- منطقة البحث -->
+    <main class="flex-1 px-4 max-w-lg mx-auto w-full -mt-2">
+        <div class="bg-white p-6 rounded-[2rem] custom-shadow mb-6">
+            <h2 class="text-xl font-black text-slate-800 mb-2">تتبع طلبك الآن</h2>
+            <p class="text-xs font-bold text-slate-500 mb-5">أدخل رقم الفاتورة أو الروشتة المرسل لك لمعرفة حالة طلبك.</p>
+            
+            <form id="track-form" class="space-y-4">
+                <div class="relative">
+                    <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                        <i class="fas fa-receipt text-slate-400"></i>
+                    </div>
+                    <input type="text" id="search-input" required class="w-full pr-11 pl-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all font-black text-lg text-slate-700" placeholder="رقم الطلب (مثال: 1025)">
+                </div>
+                <button type="submit" id="btn-search" class="w-full bg-slate-800 text-white py-4 rounded-2xl font-black text-lg shadow-lg hover:bg-slate-900 transition-colors flex items-center justify-center gap-2">
+                    <span>بحث عن الطلب</span>
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- رسالة الخطأ (تظهر عند عدم وجود الطلب) -->
+        <div id="error-msg" class="hidden bg-red-50 border border-red-100 text-red-600 p-4 rounded-2xl text-center font-bold text-sm custom-shadow animate-bounce">
+            <i class="fas fa-exclamation-circle text-lg mb-1 block"></i>
+            عفواً، لا يوجد طلب بهذا الرقم. تأكد من الرقم وحاول مرة أخرى.
+        </div>
+
+        <!-- حالة التحميل -->
+        <div id="loading" class="hidden text-center py-8">
+            <div class="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
+            <p class="font-bold text-slate-500">جاري البحث...</p>
+        </div>
+
+        <!-- نتيجة البحث (شريط التقدم) -->
+        <div id="result-container" class="hidden bg-white p-6 rounded-[2rem] custom-shadow mb-8 border border-slate-50">
+            <!-- تفاصيل الطلب -->
+            <div class="border-b border-slate-100 pb-4 mb-6 flex justify-between items-center">
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">رقم الطلب</p>
+                    <h3 class="text-2xl font-black text-blue-600" id="res-order-no">#000</h3>
+                </div>
+                <div class="text-left">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">المبلغ المطلوب</p>
+                    <h3 class="text-xl font-black text-slate-800" id="res-value">0 <span class="text-xs">ج.م</span></h3>
+                </div>
+            </div>
+
+            <!-- شريط الحالات (Stepper) -->
+            <div class="relative pl-2">
+                
+                <!-- الخطوة 1: تم الاستلام بالصيدلية -->
+                <div class="relative flex items-start mb-8 group">
+                    <div id="line-1" class="step-line"></div>
+                    <div id="icon-1" class="step-icon w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center flex-shrink-0 border-4 border-white shadow-sm transition-colors">
+                        <i class="fas fa-store text-lg"></i>
+                    </div>
+                    <div class="mr-4 pt-2">
+                        <h4 class="font-black text-slate-800">قيد التجهيز بالصيدلية</h4>
+                        <p class="text-xs font-bold text-slate-400 mt-1" id="time-1">تم الاستلام: --:--</p>
+                    </div>
+                </div>
+
+                <!-- الخطوة 2: في الطريق للمندوب -->
+                <div class="relative flex items-start mb-8 group">
+                    <div id="line-2" class="step-line"></div>
+                    <div id="icon-2" class="step-icon w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center flex-shrink-0 border-4 border-white shadow-sm transition-colors">
+                        <i class="fas fa-motorcycle text-lg"></i>
+                    </div>
+                    <div class="mr-4 pt-2">
+                        <h4 class="font-black text-slate-800">في الطريق إليك</h4>
+                        <p class="text-xs font-bold text-slate-400 mt-1" id="time-2">بانتظار خروج المندوب</p>
+                    </div>
+                </div>
+
+                <!-- الخطوة 3: تم التسليم -->
+                <div class="relative flex items-start group">
+                    <div id="icon-3" class="step-icon w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center flex-shrink-0 border-4 border-white shadow-sm transition-colors">
+                        <i class="fas fa-check-circle text-lg"></i>
+                    </div>
+                    <div class="mr-4 pt-2">
+                        <h4 class="font-black text-slate-800">تم التسليم</h4>
+                        <p class="text-xs font-bold text-slate-400 mt-1" id="time-3">بانتظار وصولك بالسلامة</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- معلومات المندوب (تظهر فقط إذا كان الطلب Out أو Delivered) -->
+            <div id="driver-info-box" class="hidden mt-8 pt-6 border-t border-slate-100">
+                <p class="text-[10px] font-black text-slate-400 uppercase mb-3 text-center">بيانات مندوب التوصيل الخاص بك</p>
+                <div class="bg-blue-50/50 p-4 rounded-2xl flex items-center justify-between border border-blue-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-500 shadow-sm">
+                            <i class="fas fa-user-helmet-safety"></i>
+                        </div>
+                        <div>
+                            <h5 class="font-black text-sm text-slate-800" id="res-driver-name">اسم المندوب</h5>
+                            <p class="text-xs font-bold text-slate-500">طيار الصيدلية</p>
+                        </div>
+                    </div>
+                    <a href="#" id="res-driver-call" class="w-10 h-10 bg-green-500 text-white rounded-xl flex items-center justify-center shadow-md hover:bg-green-600 transition-colors">
+                        <i class="fas fa-phone"></i>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center pb-6 pt-2">
+        <p class="text-xs font-bold text-slate-400">جميع الحقوق محفوظة © صيدليتنا</p>
+    </footer>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        const modal = document.getElementById('customModal');
-        const actionBtn = document.getElementById('mainActionBtn');
-        let deferredPrompt;
+        // إعدادات قاعدة البيانات (نفس الإعدادات الخاصة بالإدارة)
+        const firebaseConfig = {
+            databaseURL: "https://delivery-man-cd27a-default-rtdb.firebaseio.com/",
+            projectId: "delivery-man-cd27a"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        // 1. التقاط حدث التثبيت من المتصفح
-        window.addEventListener('beforeinstallprompt', (e) => {
+        // دالة تنسيق الوقت
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            return new Date(timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // عملية البحث
+        document.getElementById('track-form').onsubmit = async (e) => {
             e.preventDefault();
-            deferredPrompt = e;
-            showMyModal();
-        });
+            const orderNo = document.getElementById('search-input').value.trim();
+            if(!orderNo) return;
 
-        // 2. إظهار النافذة يدوياً بعد 4 ثوانٍ إذا لم تظهر تلقائياً
-        setTimeout(() => {
-            if (!window.matchMedia('(display-mode: standalone)').matches) {
-                showMyModal();
+            const btn = document.getElementById('btn-search');
+            const errorBox = document.getElementById('error-msg');
+            const resultBox = document.getElementById('result-container');
+            const loader = document.getElementById('loading');
+
+            // إعادة ضبط الواجهة
+            errorBox.classList.add('hidden');
+            resultBox.classList.add('hidden');
+            loader.classList.remove('hidden');
+            btn.disabled = true;
+
+            try {
+                // البحث في Firebase عن طريق الحقل 'orderNo'
+                const snapshot = await db.ref('orders').orderByChild('orderNo').equalTo(orderNo).once('value');
+                
+                if (snapshot.exists()) {
+                    // نظراً لأن النتيجة قد تعود ككائن يحتوي على مفتاح عشوائي، نأخذ أول نتيجة
+                    const data = snapshot.val();
+                    const orderKey = Object.keys(data)[0];
+                    const orderData = data[orderKey];
+                    
+                    updateTrackingUI(orderData);
+                    
+                    loader.classList.add('hidden');
+                    resultBox.classList.remove('hidden');
+                } else {
+                    // لم يتم العثور على الطلب
+                    loader.classList.add('hidden');
+                    errorBox.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Error fetching order:", error);
+                loader.classList.add('hidden');
+                errorBox.innerHTML = '<i class="fas fa-wifi text-lg mb-1 block"></i> تأكد من اتصالك بالإنترنت.';
+                errorBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
             }
-        }, 4000);
+        };
 
-        function showMyModal() {
-            modal.style.display = 'flex';
-        }
+        // دالة تحديث شكل شريط التقدم (Stepper) بناءً على الحالة
+        function updateTrackingUI(order) {
+            document.getElementById('res-order-no').innerText = `#${order.orderNo}`;
+            document.getElementById('res-value').innerHTML = `${order.value} <span class="text-xs">ج.م</span>`;
 
-        function closeModal() {
-            modal.style.display = 'none';
-        }
+            // Reset all styles
+            for(let i=1; i<=3; i++) {
+                const icon = document.getElementById(`icon-${i}`);
+                icon.className = "step-icon w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center flex-shrink-0 border-4 border-white shadow-sm transition-all duration-500";
+                if(i < 3) document.getElementById(`line-${i}`).className = "step-line transition-all duration-500";
+            }
 
-        // 3. برمجة الزر ليعمل في كل الحالات
-        actionBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                // إذا كان المتصفح جاهزاً، اطلب التثبيت الرسمي
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') closeModal();
-                deferredPrompt = null;
+            // Step 1: Pending (Always active if order exists)
+            document.getElementById('icon-1').classList.add('bg-blue-600', 'text-white');
+            document.getElementById('time-1').innerText = `تم التسجيل: ${formatTime(order.createdAt)}`;
+            document.getElementById('time-2').innerText = 'بانتظار خروج المندوب...';
+            document.getElementById('time-3').innerText = 'في الانتظار';
+            
+            // التعامل مع معلومات المندوب
+            const driverBox = document.getElementById('driver-info-box');
+            if (order.status === 'out' || order.status === 'delivered' || order.status === 'collected') {
+                // Step 2: Out for delivery
+                document.getElementById('line-1').classList.add('active');
+                document.getElementById('icon-2').classList.add('bg-blue-600', 'text-white');
+                
+                // إضافة تأثير النبض (Pulse) إذا كان في الطريق الآن
+                if(order.status === 'out') {
+                    document.getElementById('icon-2').classList.add('pulse-ring');
+                    document.getElementById('time-2').innerText = `خرج للتوصيل: ${formatTime(order.outAt)}`;
+                    document.getElementById('time-3').innerText = 'المندوب في الطريق إليك';
+                }
+
+                // إظهار بيانات المندوب
+                driverBox.classList.remove('hidden');
+                document.getElementById('res-driver-name').innerText = order.driverName;
+                document.getElementById('res-driver-call').href = `tel:${order.driverPhone}`;
             } else {
-                // إذا لم يكن المتصفح جاهزاً (مثل آيفون أو كروم المعلق)
-                // وجهه لكيفية التثبيت اليدوي
-                alert("لتثبيت التطبيق:\n1. اضغط على خيارات المتصفح (⋮)\n2. اختر 'تثبيت التطبيق' أو 'إضافة للشاشة الرئيسية'");
+                driverBox.classList.add('hidden');
             }
-        });
 
-        // تسجيل الخدمة (ضروري جداً لكروم)
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('data:application/javascript,self.addEventListener("fetch", (e) => {});');
+            if (order.status === 'delivered' || order.status === 'collected') {
+                // Step 3: Delivered
+                document.getElementById('line-2').classList.add('active');
+                document.getElementById('icon-3').classList.add('bg-green-500', 'text-white');
+                document.getElementById('icon-2').classList.remove('pulse-ring'); // إيقاف النبض
+                
+                document.getElementById('time-2').innerText = `تم التوصيل في: ${formatTime(order.outAt)}`;
+                document.getElementById('time-3').innerHTML = `<span class="text-green-500 font-black">وصلك بالسلامة: ${formatTime(order.deliveredAt)}</span>`;
+                
+                // إخفاء الاتصال بالمندوب لانتهاء الحاجة إليه
+                document.getElementById('res-driver-call').classList.add('hidden');
+            } else {
+                document.getElementById('res-driver-call').classList.remove('hidden');
+            }
         }
     </script>
 </body>
 </html>
-
