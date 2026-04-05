@@ -1,0 +1,176 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>نظام التوصيل | Delivery Man</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            overflow: hidden; background-color: #f8fafc;
+            font-family: 'Noto Sans Arabic', sans-serif;
+        }
+
+        .app-wrapper {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column;
+        }
+
+        iframe {
+            flex-grow: 1; border: none; width: 100%; height: 100%;
+        }
+
+        /* نافذة التثبيت المخصصة */
+        #customInstallModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 350px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .pulse-btn {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+        }
+
+        /* أيقونات التعليمات للايفون */
+        .ios-instruction {
+            display: none;
+            border-top: 1px solid #eee;
+            margin-top: 15px;
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-wrapper">
+        <iframe 
+            src="https://hr-directions.github.io/Delivery-man/" 
+            id="mainFrame"
+            allow="geolocation; camera;"
+            onload="document.getElementById('bootLoader').style.display='none'">
+        </iframe>
+    </div>
+
+    <!-- شاشة التحميل -->
+    <div id="bootLoader" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-[10001]">
+        <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-gray-600 font-medium">جاري تجهيز النظام...</p>
+    </div>
+
+    <!-- نافذة التثبيت الذكية -->
+    <div id="customInstallModal">
+        <div class="modal-content">
+            <div class="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-truck text-4xl text-indigo-600"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800 mb-2">تثبيت تطبيق المناديب</h2>
+            <p class="text-gray-500 text-sm mb-6">ثبت التطبيق الآن للوصول السريع ومتابعة الطلبات بدقة عالية.</p>
+            
+            <!-- زر اندرويد/كروم -->
+            <button id="androidInstallBtn" class="hidden w-full bg-indigo-600 text-white py-4 rounded-xl font-bold pulse-btn mb-3">
+                تثبيت الآن
+            </button>
+
+            <!-- تعليمات ايفون/سفاري -->
+            <div id="iosInstructions" class="ios-instruction text-right">
+                <p class="text-xs text-gray-600 mb-2 font-bold">للتثبيت على آيفون:</p>
+                <ol class="text-xs text-gray-500 space-y-2">
+                    <li>1. اضغط على زر المشاركة <i class="fas fa-external-link-alt text-blue-500"></i> بالأسفل.</li>
+                    <li>2. اختر "إضافة إلى الشاشة الرئيسية" <i class="far fa-plus-square text-gray-800"></i>.</li>
+                </ol>
+            </div>
+
+            <button onclick="closeModal()" class="text-gray-400 text-sm mt-4 hover:underline">ربما لاحقاً</button>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('customInstallModal');
+        const androidBtn = document.getElementById('androidInstallBtn');
+        const iosInstr = document.getElementById('iosInstructions');
+        let deferredPrompt;
+
+        // اكتشاف نوع الجهاز
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+
+        // عرض النافذة بناءً على التفاعل
+        if (!isStandalone) {
+            setTimeout(() => {
+                modal.style.display = 'flex';
+                if (isIOS) {
+                    iosInstr.style.display = 'block';
+                }
+            }, 5000); // تظهر بعد 5 ثواني
+        }
+
+        // التعامل مع رسالة اندرويد التلقائية
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            androidBtn.classList.remove('hidden');
+        });
+
+        androidBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') closeModal();
+                deferredPrompt = null;
+            }
+        });
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // تسجيل الخدمة لمتطلبات جوجل
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('data:application/javascript,self.addEventListener("fetch", (e) => {});');
+            });
+        }
+    </script>
+</body>
+</html>
+
+
+
